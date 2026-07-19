@@ -1,0 +1,564 @@
+
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="پرامپتینو | ابزاری برای تبدیل یک ایده‌ی ساده به پرامپت حرفه‌ای تصویر برای ChatGPT، Midjourney، Nano Banana و دیگر هوش‌های مصنوعی تصویرساز">
+    <title>پرامپتینو | استودیوی ساخت پرامپت حرفه‌ای</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* --- نور ملایم صبحگاهی استودیو: پس‌زمینه‌ی ابری نرم با لهجه‌ی بنفش-آسمانی --- */
+            --bg: #F3F1F9;
+            --bg-soft: #EAE6F5;
+            --surface: #FFFFFF;
+            --ink: #33304A;
+            --ink-dim: #8B87A0;
+            --accent: #8377E8;
+            --accent-deep: #6C5FDB;
+            --accent-soft: rgba(131, 119, 232, 0.10);
+            --accent-line: rgba(131, 119, 232, 0.28);
+            --danger: #E2634F;
+
+            /* سایه‌ی نرم دوگانه (soft-UI): یک روشنایی از بالا، یک سایه‌ی محو از پایین */
+            --shadow-soft: 8px 8px 20px rgba(148, 138, 199, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);
+            --shadow-inset: inset 3px 3px 8px rgba(148, 138, 199, 0.12), inset -3px -3px 8px rgba(255, 255, 255, 0.7);
+            --particle-rgb: 131, 119, 232;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        #particle-canvas {
+            position: fixed; inset: 0; width: 100%; height: 100%;
+            z-index: -1; pointer-events: none;
+        }
+        .glow-backdrop {
+            position: fixed; top: -15%; left: 50%; transform: translateX(-50%);
+            width: 900px; height: 650px; pointer-events: none; z-index: -1;
+            background: radial-gradient(ellipse at center, rgba(131,119,232,0.14) 0%, rgba(131,119,232,0.05) 45%, transparent 72%);
+        }
+        .hidden { display: none !important; }
+
+        .view-container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 56px 20px 60px;
+            position: relative;
+            z-index: 1;
+            animation: fadeIn 0.6s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Header --- */
+        header { text-align: center; margin-bottom: 44px; }
+        .eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 0.78rem; font-weight: 700; letter-spacing: 0.5px;
+            color: var(--accent-deep); background: var(--accent-soft);
+            border: 1px solid var(--accent-line); border-radius: 999px;
+            padding: 6px 16px; margin-bottom: 22px;
+        }
+        .eyebrow::before { content: '●'; font-size: 0.6rem; }
+        h1 {
+            font-size: clamp(2.6rem, 7vw, 3.6rem); font-weight: 900;
+            letter-spacing: -1px; margin-bottom: 14px; color: var(--ink);
+        }
+        .subtitle { font-size: 1.05rem; font-weight: 300; color: var(--ink-dim); max-width: 480px; margin: 0 auto; line-height: 1.9; }
+
+        /* --- Cards: سطح نرم برجسته با سایه‌ی دوگانه --- */
+        .card {
+            background: var(--surface);
+            border-radius: 24px; padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-soft);
+            transition: box-shadow 0.3s ease;
+        }
+        .field + .field { margin-top: 26px; }
+        .field-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .step-badge {
+            flex-shrink: 0; width: 32px; height: 32px; border-radius: 11px;
+            background: var(--accent-soft); color: var(--accent-deep);
+            font-weight: 700; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            font-variant-numeric: tabular-nums;
+        }
+        label.field-label { font-weight: 700; font-size: 1.02rem; color: var(--ink); }
+
+        input, select, textarea {
+            width: 100%; padding: 14px 16px; background: var(--bg-soft);
+            border: 1.5px solid transparent; border-radius: 14px;
+            color: var(--ink); font-family: 'Vazirmatn', sans-serif;
+            font-size: 1rem; outline: none;
+            box-shadow: var(--shadow-inset);
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        input::placeholder, textarea::placeholder { color: var(--ink-dim); opacity: 0.75; }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent); background: var(--surface);
+            box-shadow: 0 0 0 4px var(--accent-soft);
+        }
+        select {
+            cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236C5FDB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat; background-position: left 1rem center; background-size: 1em; padding-left: 40px;
+        }
+        textarea { resize: vertical; min-height: 84px; }
+
+        /* --- Radio / choice chips --- */
+        .radio-group { display: flex; gap: 12px; }
+        .radio-group label {
+            flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px; background: var(--bg-soft); border: 1.5px solid transparent;
+            border-radius: 14px; cursor: pointer; font-weight: 500;
+            box-shadow: var(--shadow-inset);
+            transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+        }
+        .radio-group input[type="radio"] { width: auto; accent-color: var(--accent); }
+        .radio-group input[type="radio"]:checked + span { color: var(--accent-deep); font-weight: 800; }
+        .radio-group label:has(input:checked) {
+            border-color: var(--accent); background: var(--surface);
+            box-shadow: 0 0 0 4px var(--accent-soft);
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            width: 100%; padding: 18px; border: none; border-radius: 18px;
+            font-family: 'Vazirmatn', sans-serif; font-size: 1.1rem; font-weight: 700;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-generate {
+            background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+            color: #fff;
+            box-shadow: 0 14px 32px -12px rgba(108, 95, 219, 0.55), var(--shadow-soft);
+        }
+        .btn-generate:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 18px 38px -12px rgba(108, 95, 219, 0.65); }
+        .btn-generate:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        .btn-copy {
+            background: var(--bg-soft); color: var(--accent-deep); border: 1.5px solid var(--accent-line);
+            box-shadow: var(--shadow-inset);
+        }
+        .btn-copy:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+        /* آیکن دیافراگم دوربین: هنگام پردازش می‌چرخد */
+        .aperture-icon { width: 20px; height: 20px; flex-shrink: 0; }
+        .aperture-icon .blade { transform-origin: 12px 12px; transition: transform 0.35s ease; }
+        .btn-generate.is-loading .aperture-icon { animation: spin 1.1s linear infinite; }
+        .btn-generate.is-loading .blade { transform: scale(0.55); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #promptOutput {
+            white-space: pre-wrap; font-family: 'Courier New', monospace; line-height: 1.85;
+            margin-bottom: 16px; color: var(--ink); font-size: 0.95rem;
+            background: var(--bg-soft); border-radius: 16px; padding: 18px;
+            box-shadow: var(--shadow-inset);
+        }
+
+        footer { text-align: center; margin-top: 36px; padding: 20px 10px; font-size: 0.9rem; color: var(--ink-dim); }
+        footer p { margin: 6px 0; }
+        footer a { color: var(--accent-deep); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--accent-line); }
+        footer a:hover { border-color: var(--accent-deep); }
+
+        @media (max-width: 480px) {
+            .radio-group { flex-direction: column; }
+            .card { padding: 24px; border-radius: 20px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .view-container { animation: none; }
+            #particle-canvas { display: none; }
+            .btn-generate.is-loading .aperture-icon { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas" aria-hidden="true"></canvas>
+    <div class="glow-backdrop" aria-hidden="true"></div>
+
+    <div id="main-view" class="view-container">
+        <header>
+            <span class="eyebrow">استودیوی پرامپت‌سازی هوش مصنوعی</span>
+            <h1>پرامپتینو</h1>
+            <p class="subtitle">تصویر رویایی خود را در چند مرحله به یک پرامپت حرفه‌ای و آماده‌ی تولید تبدیل کنید</p>
+        </header>
+
+        <div class="card">
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">01</span>
+                    <label class="field-label" for="mainIdea">ایده یا موضوع اصلی تصویر</label>
+                </div>
+                <input type="text" id="mainIdea" placeholder="مثال: یک گربه فضانورد در حال شناختن کهکشان">
+            </div>
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">02</span>
+                    <label class="field-label" for="details">توضیحات اضافه برای بهتر شدن پرامپت</label>
+                </div>
+                <textarea id="details" placeholder="مثال: گربه باید نارنجی باشد"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">03</span>
+                    <label class="field-label" for="style">سبک تصویر (Style)</label>
+                </div>
+                <select id="style">
+                    <option value="Photorealistic">فتورئال (Photorealistic)</option>
+                    <option value="Cinematic">سینمایی (Cinematic)</option>
+                    <option value="Anime">انیمه (Anime)</option>
+                    <option value="3D Render">رندر سه‌بعدی (3D Render)</option>
+                    <option value="Oil Painting">نقاشی رنگ روغن (Oil Painting)</option>
+                    <option value="Watercolor">آبرنگ (Watercolor)</option>
+                    <option value="Cyberpunk">سایبرپانک (Cyberpunk)</option>
+                    <option value="Fantasy Art">هنر فانتزی (Fantasy Art)</option>
+                    <option value="Minimalist">مینیمالیست (Minimalist)</option>
+                    <option value="Pop Art">پاپ آرت (Pop Art)</option>
+                    <option value="Surrealism">سورئالیسم (Surrealism)</option>
+                </select>
+            </div>
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">04</span>
+                    <label class="field-label" for="lighting">نورپردازی و فضا</label>
+                </div>
+                <select id="lighting">
+                    <option value="Golden Hour">نور طلایی غروب (Golden Hour)</option>
+                    <option value="Studio Lighting">نورپردازی استودیویی (Studio Lighting)</option>
+                    <option value="Neon Lights">نورهای نئونی (Neon Lights)</option>
+                    <option value="Soft Natural Light">نور طبیعی ملایم (Soft Natural Light)</option>
+                    <option value="Dramatic Lighting">نورپردازی دراماتیک (Dramatic Lighting)</option>
+                    <option value="Volumetric Lighting">نورپردازی حجمی (Volumetric Lighting)</option>
+                    <option value="Dark & Moody">تاریک و رازآلود (Dark & Moody)</option>
+                </select>
+            </div>
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">05</span>
+                    <label class="field-label" for="dimensions">ابعاد تصویر</label>
+                </div>
+                <select id="dimensions">
+                    <option value="16:9 Landscape">16:9 افقی (یوتیوب / ویندوز)</option>
+                    <option value="9:16 Portrait">9:16 عمودی (استوری / شورتز)</option>
+                    <option value="1:1 Square">1:1 مربع (پست اینستاگرام)</option>
+                    <option value="4:5 Portrait">4:5 عمودی (فید اینستاگرام)</option>
+                    <option value="2:3 Portrait">2:3 عمودی (پرتره کلاسیک)</option>
+                    <option value="3:2 Landscape">3:2 افقی (عکاسی معمول)</option>
+                    <option value="21:9 Ultrawide">21:9 سینمایی فوق عریض</option>
+                </select>
+            </div>
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">06</span>
+                    <label class="field-label" for="cameraAngle">زاویه دوربین و ترکیب‌بندی</label>
+                </div>
+                <select id="cameraAngle">
+                    <option value="Wide Shot">نمای باز (Wide Shot)</option>
+                    <option value="Close-up">نمای نزدیک (Close-up)</option>
+                    <option value="Aerial View">نمای هوایی/پهپاد (Aerial View)</option>
+                    <option value="Low Angle">زاویه پایین (Low Angle)</option>
+                    <option value="High Angle">زاویه بالا (High Angle)</option>
+                    <option value="Macro">نمای ماکرو (Macro)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">07</span>
+                    <label class="field-label" id="hasTextLabel">آیا در تصویر متن داشته باشد؟</label>
+                </div>
+                <div class="radio-group" role="radiogroup" aria-labelledby="hasTextLabel">
+                    <label><input type="radio" name="hasText" value="no" checked><span>خیر</span></label>
+                    <label><input type="radio" name="hasText" value="yes"><span>بله</span></label>
+                </div>
+                <div id="textLanguageContainer" class="hidden" style="margin-top: 18px;">
+                    <label class="field-label" for="textLanguage" style="font-size:0.95rem; margin-bottom: 8px; display:block;">زبان متن داخل عکس</label>
+                    <select id="textLanguage">
+                        <option value="English">انگلیسی</option>
+                        <option value="Persian">فارسی</option>
+                        <option value="Hebrew">عبری</option>
+                        <option value="Arabic">عربی</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="field">
+                <div class="field-head">
+                    <span class="step-badge">08</span>
+                    <label class="field-label" for="aiModel">پرامپت برای کدام هوش مصنوعی است؟</label>
+                </div>
+                <select id="aiModel">
+                    <option value="ChatGPT (DALL-E 3)">ChatGPT</option>
+                    <option value="Midjourney">Midjourney</option>
+                    <option value="Nano Banana">Nano Banana</option>
+                    <option value="Stable Diffusion">Stable Diffusion</option>
+                    <option value="Leonardo AI">Leonardo AI</option>
+                    <option value="other">سایر...</option>
+                </select>
+                <input type="text" id="otherAIInput" class="hidden" style="margin-top: 14px;" placeholder="نام هوش مصنوعی را به انگلیسی تایپ کنید">
+            </div>
+        </div>
+
+        <button id="generateBtn" class="btn btn-generate" type="button">
+            <svg class="aperture-icon" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10.5" stroke="#fff" stroke-width="1.4" opacity="0.35"/>
+                <g class="blade" fill="#fff">
+                    <path d="M12 4 L15 10 L9 10 Z"/>
+                    <path d="M20 8 L18 15 L13.5 11 Z"/>
+                    <path d="M18 19 L11 18 L14.5 12.5 Z"/>
+                    <path d="M6 19 L7 12 L11.5 16 Z"/>
+                    <path d="M4 8 L10 9.5 L6.5 15 Z"/>
+                </g>
+            </svg>
+            <span id="generateBtnLabel">ساخت پرامپت حرفه‌ای</span>
+        </button>
+
+        <div id="outputCard" class="card hidden" style="margin-top: 22px;" aria-live="polite">
+            <h3 style="margin-bottom: 14px; color: var(--accent-deep); font-size: 1.05rem;">پرامپت نهایی شما</h3>
+            <div id="promptOutput"></div>
+            <button id="copyBtn" class="btn btn-copy" type="button">کپی کردن پرامپت 📋</button>
+        </div>
+
+        <footer>
+            <p>سر بزنید به سایت فروش فایل گرافیکی گرافیت پلاس</p>
+            <p>لینک سایت: <a href="https://graphit-plus.ir/" target="_blank" rel="noopener noreferrer">گرافیت پلاس</a></p>
+        </footer>
+    </div>
+
+    <script>
+    (() => {
+        'use strict';
+
+        const dom = {
+            canvas: document.getElementById('particle-canvas'),
+            generateBtn: document.getElementById('generateBtn'),
+            generateBtnLabel: document.getElementById('generateBtnLabel'),
+            copyBtn: document.getElementById('copyBtn'),
+            mainIdea: document.getElementById('mainIdea'),
+            details: document.getElementById('details'),
+            style: document.getElementById('style'),
+            lighting: document.getElementById('lighting'),
+            dimensions: document.getElementById('dimensions'),
+            cameraAngle: document.getElementById('cameraAngle'),
+            textLanguage: document.getElementById('textLanguage'),
+            textLanguageContainer: document.getElementById('textLanguageContainer'),
+            aiModel: document.getElementById('aiModel'),
+            otherAIInput: document.getElementById('otherAIInput'),
+            outputCard: document.getElementById('outputCard'),
+            promptOutput: document.getElementById('promptOutput'),
+        };
+
+        // ================= ذرات معلق: گرد و غبار نرم در نور محیط، رو به بالا =================
+        const ctx = dom.canvas.getContext('2d', { alpha: true });
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let particles = [];
+        const particleColor = '131, 119, 232';
+        let animationId = null;
+        let isTabVisible = true;
+
+        function resizeCanvas() {
+            dom.canvas.width = window.innerWidth;
+            dom.canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * dom.canvas.width;
+                this.y = dom.canvas.height + Math.random() * 40;
+                this.size = Math.random() * 2 + 0.6;
+                this.speedX = (Math.random() * 0.4 - 0.2) * 0.4;
+                this.speedY = -(Math.random() * 0.3 + 0.06);
+                this.opacity = Math.random() * 0.25 + 0.08;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.y < -20) this.reset();
+                if (this.x < 0 || this.x > dom.canvas.width) this.speedX *= -1;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${particleColor}, ${this.opacity})`;
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            if (prefersReducedMotion) return;
+            const numberOfParticles = Math.min((window.innerWidth * window.innerHeight) / 24000, 90);
+            for (let i = 0; i < numberOfParticles; i++) particles.push(new Particle());
+        }
+
+        function animateParticles() {
+            if (!isTabVisible || prefersReducedMotion) { animationId = null; return; }
+            ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
+            for (const p of particles) { p.update(); p.draw(); }
+            animationId = requestAnimationFrame(animateParticles);
+        }
+
+        function startAnimation() {
+            if (animationId === null && !prefersReducedMotion) animationId = requestAnimationFrame(animateParticles);
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            isTabVisible = document.visibilityState === 'visible';
+            if (isTabVisible) startAnimation();
+        });
+
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => { resizeCanvas(); initParticles(); }, 150);
+        });
+
+        if (!prefersReducedMotion) {
+            resizeCanvas();
+            initParticles();
+            startAnimation();
+        }
+
+        // ================= رابط کاربری =================
+        function toggleTextInput() {
+            const isYes = document.querySelector('input[name="hasText"][value="yes"]').checked;
+            dom.textLanguageContainer.classList.toggle('hidden', !isYes);
+        }
+        function toggleOtherAI() {
+            dom.otherAIInput.classList.toggle('hidden', dom.aiModel.value !== 'other');
+        }
+        document.querySelectorAll('input[name="hasText"]').forEach(el => el.addEventListener('change', toggleTextInput));
+        dom.aiModel.addEventListener('change', toggleOtherAI);
+
+        // ================= کپی =================
+        function copyText(text, btn) {
+            const originalText = btn.innerText;
+            const showCopied = () => { btn.innerText = 'کپی شد! ✅'; setTimeout(() => { btn.innerText = originalText; }, 2000); };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(showCopied).catch(() => fallbackCopy(text, showCopied));
+            } else {
+                fallbackCopy(text, showCopied);
+            }
+        }
+        function fallbackCopy(text, onSuccess) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text; textArea.style.position = 'fixed'; textArea.style.opacity = '0';
+            document.body.appendChild(textArea); textArea.select();
+            try { document.execCommand('copy'); onSuccess(); }
+            catch (e) { alert('خطا در کپی کردن'); }
+            finally { document.body.removeChild(textArea); }
+        }
+        dom.copyBtn.addEventListener('click', () => copyText(dom.promptOutput.innerText, dom.copyBtn));
+
+        // ================= ترجمه به انگلیسی (فارسی یا فینگلیش) =================
+        const translationCache = new Map();
+        function containsPersianScript(text) { return /[\u0600-\u06FF]/.test(text); }
+
+        async function fetchWithTimeout(url, ms = 8000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), ms);
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } finally { clearTimeout(timer); }
+        }
+        async function translateViaGoogle(text) {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+            const data = await fetchWithTimeout(url);
+            return data[0].map(part => part[0]).join('');
+        }
+        async function translateViaMyMemory(text, langpair) {
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`;
+            const data = await fetchWithTimeout(url);
+            return data.responseData ? data.responseData.translatedText : text;
+        }
+        async function translateToEnglish(text) {
+            if (!text) return text;
+            const trimmed = text.trim();
+            if (!trimmed) return text;
+            if (translationCache.has(trimmed)) return translationCache.get(trimmed);
+            const hasPersianScript = containsPersianScript(trimmed);
+            let result = trimmed;
+            try {
+                result = hasPersianScript ? await translateViaMyMemory(trimmed, 'fa|en') : await translateViaGoogle(trimmed);
+            } catch (error) {
+                try { result = await translateViaMyMemory(trimmed, 'auto|en'); }
+                catch (fallbackError) { result = trimmed; }
+            }
+            translationCache.set(trimmed, result);
+            return result;
+        }
+
+        // ================= ساخت پرامپت =================
+        function buildPrompt({ idea, details, style, lighting, cameraAngle, dimensions, hasText, textLanguage, aiModel }) {
+            const lines = [`Subject: ${idea}.`];
+            if (details) lines.push(`Additional Details: ${details}.`);
+            lines.push(`Art Style: ${style}.`);
+            lines.push(`Lighting & Mood: ${lighting}.`);
+            lines.push(`Camera Angle & Composition: ${cameraAngle}.`);
+            lines.push(`Aspect Ratio: ${dimensions}.`);
+            lines.push(hasText === 'yes'
+                ? `Text Overlay: Include text written in ${textLanguage}. Ensure the text is legible and seamlessly integrated into the image.`
+                : 'Text Overlay: No text.');
+            lines.push('Quality Enhancers: Masterpiece, 8k resolution, ultra-detailed, hyper-realistic, sharp focus, professional color grading, highly intricate, award-winning visual quality.');
+            lines.push(`Optimized for: ${aiModel}.`);
+            return lines.join('\n');
+        }
+
+        async function generatePrompt() {
+            const mainIdea = dom.mainIdea.value.trim();
+            if (!mainIdea) { alert('لطفاً ایده اصلی را وارد کنید.'); dom.mainIdea.focus(); return; }
+
+            const originalLabel = dom.generateBtnLabel.innerText;
+            dom.generateBtnLabel.innerText = 'در حال پردازش و ترجمه...';
+            dom.generateBtn.classList.add('is-loading');
+            dom.generateBtn.disabled = true;
+
+            try {
+                const details = dom.details.value.trim();
+                let aiModel = dom.aiModel.value;
+                if (aiModel === 'other') aiModel = dom.otherAIInput.value.trim() || 'AI';
+                const hasText = document.querySelector('input[name="hasText"]:checked').value;
+
+                const [translatedIdea, translatedDetails] = await Promise.all([
+                    translateToEnglish(mainIdea),
+                    translateToEnglish(details),
+                ]);
+
+                const prompt = buildPrompt({
+                    idea: translatedIdea, details: translatedDetails,
+                    style: dom.style.value, lighting: dom.lighting.value,
+                    cameraAngle: dom.cameraAngle.value, dimensions: dom.dimensions.value,
+                    hasText, textLanguage: dom.textLanguage.value, aiModel,
+                });
+
+                dom.promptOutput.innerText = prompt;
+                dom.outputCard.classList.remove('hidden');
+                dom.outputCard.scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                alert('مشکلی در ساخت پرامپت پیش آمد. لطفاً دوباره تلاش کنید.');
+            } finally {
+                dom.generateBtnLabel.innerText = originalLabel;
+                dom.generateBtn.classList.remove('is-loading');
+                dom.generateBtn.disabled = false;
+            }
+        }
+        dom.generateBtn.addEventListener('click', generatePrompt);
+    })();
+    </script>
+</body>
+</html>
